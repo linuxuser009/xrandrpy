@@ -1,9 +1,34 @@
 import tkinter as tk
 from tkinter import ttk
 import subprocess
+import os
 
-# Replace this with your detected output name
 display_output = "eDP-1-1"
+bash_script_path = os.path.expanduser("~/.local/bin/set_brightness.sh")
+autostart_path = os.path.expanduser("~/.config/autostart/set-brightness.desktop")
+
+def write_bash_script(r, g, b, brightness):
+    os.makedirs(os.path.dirname(bash_script_path), exist_ok=True)
+    with open(bash_script_path, "w") as f:
+        f.write(f"""#!/bin/bash
+sleep 5
+xrandr --output {display_output} --gamma {r}:{g}:{b} --brightness {brightness}
+""")
+    os.chmod(bash_script_path, 0o755)
+    print(f"Saved script to {bash_script_path}")
+
+def write_autostart_entry():
+    os.makedirs(os.path.dirname(autostart_path), exist_ok=True)
+    with open(autostart_path, "w") as f:
+        f.write(f"""[Desktop Entry]
+Type=Application
+Exec={bash_script_path}
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=Set Brightness
+""")
+    print(f"Autostart entry created at {autostart_path}")
 
 def apply_xrandr():
     r = red_scale.get()
@@ -19,12 +44,15 @@ def apply_xrandr():
     except subprocess.CalledProcessError as e:
         print(f"Failed to run xrandr: {e}")
 
+    # Save settings to bash script + autostart
+    write_bash_script(r, g, b, brightness)
+    write_autostart_entry()
+
 def reset_xrandr():
     cmd = f"xrandr --output {display_output} --gamma 1:1:1 --brightness 1"
     print(f"Resetting: {cmd}")
     subprocess.run(cmd, shell=True)
 
-    # Reset slider values to defaults
     red_scale.set(1.0)
     green_scale.set(1.0)
     blue_scale.set(1.0)
@@ -32,37 +60,31 @@ def reset_xrandr():
 
 root = tk.Tk()
 root.title("Xrandr Light Blue Tint Configurator")
-root.geometry("700x800")  # Make the window larger
+root.geometry("700x800")
 
-# Red Scale
 tk.Label(root, text="Red Channel [0.1 - 1.5]", font=("Arial", 12)).pack(pady=5)
 red_scale = tk.Scale(root, from_=0.1, to=1.5, orient="horizontal", resolution=0.01, length=300)
-red_scale.set(0.8)
+red_scale.set(1.0)
 red_scale.pack(pady=5)
 
-# Green Scale
 tk.Label(root, text="Green Channel [0.1 - 1.5]", font=("Arial", 12)).pack(pady=5)
 green_scale = tk.Scale(root, from_=0.1, to=1.5, orient="horizontal", resolution=0.01, length=300)
-green_scale.set(0.9)
+green_scale.set(1.0)
 green_scale.pack(pady=5)
 
-# Blue Scale
 tk.Label(root, text="Blue Channel [0.1 - 1.5]", font=("Arial", 12)).pack(pady=5)
 blue_scale = tk.Scale(root, from_=0.1, to=1.5, orient="horizontal", resolution=0.01, length=300)
-blue_scale.set(1.2)
+blue_scale.set(1.0)
 blue_scale.pack(pady=5)
 
-# Brightness Scale
 tk.Label(root, text="Brightness [0.1 - 1.5]", font=("Arial", 12)).pack(pady=5)
 brightness_scale = tk.Scale(root, from_=0.1, to=1.5, orient="horizontal", resolution=0.01, length=300)
 brightness_scale.set(1.0)
 brightness_scale.pack(pady=5)
 
-# Apply Button
-apply_button = ttk.Button(root, text="Apply Blue Tint", command=apply_xrandr)
+apply_button = ttk.Button(root, text="Apply & Save to Startup", command=apply_xrandr)
 apply_button.pack(pady=15)
 
-# Reset Button
 reset_button = ttk.Button(root, text="Reset to Default", command=reset_xrandr)
 reset_button.pack(pady=10)
 
