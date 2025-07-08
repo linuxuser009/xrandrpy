@@ -3,7 +3,17 @@ from tkinter import ttk
 import subprocess
 import os
 
-display_output = "eDP-1-1"
+def get_first_connected_display():
+    try:
+        output = subprocess.check_output("xrandr --query", shell=True, text=True)
+        for line in output.splitlines():
+            if " connected" in line:
+                return line.split()[0]
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to get display info: {e}")
+    return "eDP-1"  # default fallback
+
+display_output = get_first_connected_display()
 bash_script_path = os.path.expanduser("~/.local/bin/set_brightness.sh")
 autostart_path = os.path.expanduser("~/.config/autostart/set-brightness.desktop")
 
@@ -44,7 +54,6 @@ def apply_xrandr():
     except subprocess.CalledProcessError as e:
         print(f"Failed to run xrandr: {e}")
 
-    # Save settings to bash script + autostart
     write_bash_script(r, g, b, brightness)
     write_autostart_entry()
 
@@ -61,6 +70,8 @@ def reset_xrandr():
 root = tk.Tk()
 root.title("Xrandr Light Blue Tint Configurator")
 root.geometry("700x800")
+
+tk.Label(root, text=f"Detected Display: {display_output}", font=("Arial", 12, "bold")).pack(pady=5)
 
 tk.Label(root, text="Red Channel [0.1 - 1.5]", font=("Arial", 12)).pack(pady=5)
 red_scale = tk.Scale(root, from_=0.1, to=1.5, orient="horizontal", resolution=0.01, length=300)
